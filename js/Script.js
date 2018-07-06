@@ -4,9 +4,11 @@ class Script{
      * Initialise la classe Script
      *
      * @param boolean p2 Vrai si le script possède une phase 2
+     * @param string curdte Date heure du serveur PHP
     */
-    constructor(p2){
+    constructor(p2, curdte){
         this.p2 = p2;
+        this.curdte = curdte * 1000;
     }
     
     /**
@@ -61,8 +63,7 @@ class Script{
     */
     getAge(dteNaiss){
         let dateArr = dteNaiss.split('/');
-        
-        let today = new Date();
+        let today = new Date(this.curdte);
         let birthDate = new Date(dateArr[2]);
         let age = today.getFullYear() - birthDate.getFullYear();
         return age;
@@ -79,12 +80,12 @@ class Script{
                 case "ACCORD":
                     if(this.p2){
                         // Crée et écrit la date et l'heure de rappel en phase 2 sur le script
-                        let dteP2 = new Date();
+                        let dteP2 = new Date(this.curdte);
                         dteP2.setDate(dteP2.getDate()+7);
                         dteP2 = this.formatDate(dteP2);
                         document.getElementById('res_p2_date').value = dteP2;
                         
-                        let hP2 = new Date();
+                        let hP2 = new Date(this.curdte);
                         hP2.getHours(hP2.setHours(9));
                         hP2.getMinutes(hP2.setMinutes(0));
                         hP2.getSeconds(hP2.setSeconds(0));
@@ -97,12 +98,12 @@ class Script{
                 case "RAPPEL AUTO":
                 case "REPONDEUR":
                     // Crée et écrit la date et l'heure du rappel
-                    let dteRappelAuto = new Date();
+                    let dteRappelAuto = new Date(this.curdte);
                     dteRappelAuto.setDate(dteRappelAuto.getDate()+1);
                     dteRappelAuto = this.formatDate(dteRappelAuto);
                     document.getElementById('res_rappel_date').value = dteRappelAuto;
-                    
-                    let hRappelAuto = new Date();
+
+                    let hRappelAuto = new Date(this.curdte);
                     hRappelAuto.getHours(hRappelAuto.setHours(9));
                     hRappelAuto.getMinutes(hRappelAuto.setMinutes(0));
                     hRappelAuto.getSeconds(hRappelAuto.setSeconds(0));
@@ -164,7 +165,8 @@ class Script{
      * Fonction permettant d'afficher l'heure
     */
 	afficheHeure() {
-		let today = new Date();
+        this.script.curdte += 500;
+		let today = new Date(this.script.curdte);
 		let h = today.getHours();
 		let m = today.getMinutes();
 		let s = today.getSeconds();
@@ -249,7 +251,7 @@ class Script{
      * Ecrit la date/heure/timestamp du jour dans le script
     */
     dateNowToScript(){
-        let now = new Date();
+        let now = new Date(this.curdte);
         let dteAppel = this.formatDate(now);
         let hAppel = this.formatHour(now);
         let timestampAppel = Math.round(now.getTime()/1000);

@@ -197,8 +197,9 @@ class Closing{
 					$save['NBAPP'] += 1;
 					break;
 				default:
-					$save['NBAPP'] += 1;
-					break;
+					if($this->resultat_conclusion != "REPONDEUR"){
+						$save['NBAPP'] += 1;
+					}
 			}
 			
 			// Si nombre d'envoi BS supérieur à 2 alors alerte
@@ -293,13 +294,6 @@ class Closing{
 				break;
 		}
 		
-		// Seulement si la 
-		if($this->isP2){			
-			// Modifie la conclusion par le status si existe
-			$this->resultat_conclusion =
-				$this->resultat_conclusion_status == "" || $this->resultat_conclusion_status == null ? $this->resultat_conclusion : $this->resultat_conclusion_status;
-		}
-		
 		$this->saveResultat($result);
 		
 		if($this->resultat_conclusion == 'RAPPEL AUTO' ||
@@ -329,7 +323,11 @@ class Closing{
 		$save['HEUREAPPEL'] = $this->appel_heure;
 		$save['RefQualif'] = $this->resultat_conclusion_id;
 		$save['RefCateg'] = $this->resultat_conclusion_categ;
-		$save['CONCLUSION'] = $this->resultat_conclusion;
+		if($this->isP2){
+			$save['CONCLUSION'] = $this->resultat_conclusion_status == "" || $this->resultat_conclusion_status == null ? $this->resultat_conclusion : $this->resultat_conclusion_status;
+		}else{
+			$save['CONCLUSION'] = $this->resultat_conclusion;
+		}
 		$save['MOTIFREFUS'] = $this->resultat_conclusion_motifref;
 		$save['UNIQUE_ID'] = $this->appel_uniqueid;
 		$save['RecordFileName'] = $this->getRFN();
@@ -367,8 +365,7 @@ class Closing{
 											 FROM HISTO_VERIF_RECORDING
 											 WHERE UNIQUEID = :uniqueid
 											 AND CALLID = :callid
-											 AND REFPROSPECT = :refprospect
-											 AND STATUS = 0");
+											 AND REFPROSPECT = :refprospect");
 			$get_rfn->execute(array(
 				"uniqueid" => $this->appel_uniqueid,
 				"callid" => $this->appel_id,
@@ -768,6 +765,8 @@ class Closing{
 			}
 		}
 	}
+
+	
 	
 	/**
 	 * Envoye le prospect vers la phase 2
@@ -795,12 +794,15 @@ class Closing{
 		foreach($req_getProspectP1->fetch(PDO::FETCH_ASSOC) as $key => $prospectP1){
 			$prospect[$key] = $prospectP1;
 		}
+
+		// Enlève les propriétés inutile pour la phase 2
+		unset($prospect['ETACOM']);
+		unset($prospect['BASECAMP']);
 		
 		if($this->checkExistP2()){
 			
-			// Enlève la propriété RefProspect
+			// Enlève la propriété refprospect
 			unset($prospect['RefProspect']);
-			unset($prospect['ETACOM']);
 			
 			// Liste des champs
 			$strReq = $this->dao->keysToStrPDOUpdate($prospect);
@@ -827,7 +829,6 @@ class Closing{
 			
 			// Liste des champs
 			$strReq = $this->dao->keysToStrPDOInsert($prospect);
-			
 			
 			// Insère les informations dans la phase 2
 			try{
