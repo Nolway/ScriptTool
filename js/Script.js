@@ -20,7 +20,7 @@ class Script{
     }
     
     /**
-     * Oblige la saisie d'un champs et le met en rouge
+     * Oblige la saisie d'un champs et le met en rose
     */
     requiredField(field){
         field.required = true;
@@ -28,7 +28,7 @@ class Script{
     }
     
     /*
-     * Supprime l'obligation la saisie d'un champs et le met en blanc
+     * Supprime l'obligation de la saisie d'un champs et le met en blanc
     */
     unRequiredField(field){
         field.required = false;
@@ -36,8 +36,8 @@ class Script{
     }
     
     /**
-     * Vérifie si date de naissance est inférieure à son max
-     * si non alors on affiche un message dans un span
+     * Vérifie si la date de naissance est inférieure à son max
+     * sinon alors on affiche un message dans un span
      *
      * @param input field Champs age à vérifier
      * @param string date Date de naissance
@@ -177,7 +177,7 @@ class Script{
 	}
     
     /**
-     * Rajoute un 0 au valeurs de temps à 1 digit
+     * Ajoute un 0 devant une valeur numérique à 1 digit si inférieur à 10
      *
      * @param int i Valeur temps
      *
@@ -230,19 +230,19 @@ class Script{
     /**
      * Permet de formater une heure
      *
-     * @param date pDate Date à formater
+     * @param date pHour Date à formater
      *
      * @returns string Heure formaté hh:mm:ss
     */
-    formatHour(pDate){
+    formatHour(pHour){
         // Récupère les heures
-        let dateH = this.checkTime(pDate.getHours());
+        let dateH = this.checkTime(pHour.getHours());
         
         // Récupére les minutes
-        let dateN = this.checkTime(pDate.getMinutes());
+        let dateN = this.checkTime(pHour.getMinutes());
         
         // Récupère les secondes
-        let dateS = this.checkTime(pDate.getSeconds());
+        let dateS = this.checkTime(pHour.getSeconds());
         
         return dateH+":"+dateN+":"+dateS;
     }

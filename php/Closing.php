@@ -306,7 +306,7 @@ class Closing{
 	}
 	
 	/**
-	 * Sauvgarde les données dans la table Resultats
+	 * Sauvegarde les données dans la table Resultats
 	 *
 	 * @param array $save Tableau contenant en clé le nom du
 	 * champ dans la base et en valeur la valeur à insérer
@@ -394,7 +394,7 @@ class Closing{
 	}
 	
 	/**
-	 * Sauvgarde les données du résultat dans la table Prod
+	 * Sauvegarde les données du résultat dans la table Prod
 	*/
 	private function saveProd(){
 		// Count des itérations
@@ -462,7 +462,7 @@ class Closing{
 	}
 	
 	/**
-	 * Vérifie si la  refappel existe déjà dans la table Prod
+	 * Vérifie si la refappel existe déjà dans la table Prod
 	 *
 	 * @return boolean Est présent ou non dans le table
 	*/
@@ -542,7 +542,7 @@ class Closing{
 	}
 	
 	/**
-	 * Sauvgarde les données dans la table Rappels
+	 * Sauvegarde les données dans la table Rappels
 	*/
 	private function saveRappel(){
 		// Création d'un tableau avec les informations du rappel
@@ -582,7 +582,7 @@ class Closing{
 	}
 	
 	/**
-	 * Sauvgarde les données dans la table Rappels de la Phase 2
+	 * Sauvegarde les données dans la table Rappels de la Phase 2
 	*/
 	private function saveRappelP2(){
 		// Création d'un tableau avec les informations du rappel

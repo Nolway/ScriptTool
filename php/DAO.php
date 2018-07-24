@@ -28,7 +28,7 @@ class DAO{
 	private function loadAdmin(){
         $mdbFilename = BASES_PATH."adminElastix.mdb";
 		if (!file_exists($mdbFilename)) {
-			die("La base de donnée admin  elastix n'a pas été trouvée !");
+			die("La base de donnée admin elastix n'a pas été trouvée !");
 		}
         $user = "";
         $password = "";

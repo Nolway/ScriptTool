@@ -4,7 +4,7 @@ require_once __DIR__.'/DAO.php';
 
 class Opening{
     
-    // Informations envoyées en GET et Autre informations du dictionnaire
+    // Informations envoyées en GET et autre informations du dictionnaire
 	private $infos;
     
     // Accés au base de données P1, P2 et Admin Elastix
