@@ -90,7 +90,7 @@ class Closing{
 		$i = 0;
 		
 		// Récupère les infos
-		$req_getProspect = $this->dao->getCamp()->prepare('SELECT * FROM Prospect WHERE RefProspect = :ref;');
+		$req_getProspect = $this->dao->getCamp()->prepare("SELECT * FROM Prospect WHERE RefProspect = :ref;");
 		$req_getProspect->execute(array(
 			"ref" => $this->prospect_id
 		));
@@ -119,7 +119,7 @@ class Closing{
 		$i = 0;
 		
 		// Récupère les infos
-		$req_getAgent = $this->dao->getAdmin()->prepare('SELECT TEAM, AGENT, LIBAGENT, SEXE, TYPE FROM AGENTS WHERE ID_AGENT = :id;');
+		$req_getAgent = $this->dao->getAdmin()->prepare("SELECT TEAM, AGENT, LIBAGENT, SEXE, TYPE FROM AGENTS WHERE ID_AGENT = :id;");
 		$req_getAgent->execute(array(
 			"id" => $this->agent_id
 		));
@@ -226,7 +226,7 @@ class Closing{
 		
 		// Sauvgarde les infos
 		try{
-			$req_saveProspect = $this->dao->getCamp()->prepare('UPDATE Prospect SET '.$strReq.' WHERE RefProspect = :refprospect');
+			$req_saveProspect = $this->dao->getCamp()->prepare("UPDATE Prospect SET $strReq WHERE RefProspect = :refprospect;");
 			$req_saveProspect->execute($save);
 		}catch(PDOException $e){
 			// Vérifie si le prospect à bien été sauvgardé
@@ -316,7 +316,6 @@ class Closing{
 		$i = 0;
 		
 		// Ajout des propriétés obligatoires
-		$save['RefProspect'] = $this->prospect_id;
 		$save['RefAppel'] = $this->appel_id;
 		$save['HOTESSE'] = $this->agent_lib;
 		$save['DATEAPPEL'] = $this->appel_date;
@@ -329,23 +328,48 @@ class Closing{
 			$save['CONCLUSION'] = $this->resultat_conclusion;
 		}
 		$save['MOTIFREFUS'] = $this->resultat_conclusion_motifref;
-		$save['UNIQUE_ID'] = $this->appel_uniqueid;
 		$save['RecordFileName'] = $this->getRFN();
 		
-		// Liste des champs
-		$strReq = $this->dao->keysToStrPDOInsert($save);
-		
-		
-		// Sauvgarde les infos
-		try{
-			$req_insertResultat = $this->dao->getCamp()->prepare('INSERT INTO Resultats '.$strReq.';');
-			$req_insertResultat->execute($save);
-		}catch(PDOException $e){
-			// Vérifie si le résultat à bien été sauvgardé
-			$trace = debug_backtrace();
-			trigger_error("Erreur dans la sauvegarde du résultat dans ".$trace[0]['file']."
-					  à la ligne ".$trace[0]['line'].". Erreur PDO : ".$e->getMessage().".", E_USER_NOTICE);
-			exit();
+		// Vérifie si l'appel a déjà été qualifié
+		if($this->checkExistAppelResultats()){
+			// Liste des champs
+			$strReq = $this->dao->keysToStrPDOUpdate($save);
+
+			// Ajout des propriétés obligatoires
+			// pour la where clause de la mise à jour
+			$save['RefProspect'] = $this->prospect_id;
+			$save['UNIQUE_ID'] = $this->appel_uniqueid;
+
+			// Sauvgarde les infos
+			try{
+				$req_updateResultat = $this->dao->getCamp()->prepare("UPDATE Resultats SET $strReq WHERE RefProspect = :RefProspect AND UNIQUE_ID = :UNIQUE_ID;");
+				$req_updateResultat->execute($save);
+			}catch(PDOException $e){
+				// Vérifie si le résultat à bien été sauvgardé
+				$trace = debug_backtrace();
+				trigger_error("Erreur dans la mise à jour du résultat dans ".$trace[0]['file']."
+						à la ligne ".$trace[0]['line'].". Erreur PDO : ".$e->getMessage().".", E_USER_NOTICE);
+				exit();
+			}
+		}else{
+			// Ajout des propriétés obligatoires pour un ajout à la base
+			$save['RefProspect'] = $this->prospect_id;
+			$save['UNIQUE_ID'] = $this->appel_uniqueid;
+
+			// Liste des champs
+			$strReq = $this->dao->keysToStrPDOInsert($save);
+
+			// Sauvgarde les infos
+			try{
+				$req_insertResultat = $this->dao->getCamp()->prepare("INSERT INTO Resultats $strReq;");
+				$req_insertResultat->execute($save);
+			}catch(PDOException $e){
+				// Vérifie si le résultat à bien été sauvgardé
+				$trace = debug_backtrace();
+				trigger_error("Erreur dans la sauvegarde du résultat dans ".$trace[0]['file']."
+						à la ligne ".$trace[0]['line'].". Erreur PDO : ".$e->getMessage().".", E_USER_NOTICE);
+				exit();
+			}
 		}
 		
 		$this->saveProd();
@@ -401,11 +425,11 @@ class Closing{
 		$i = 0;
 		
 		// Vérifie si la refappel est déjà présente
-		if($this->checkExistRefAppelProd()){
+		if($this->checkExistProd()){
 			// Tableau conteant les informations de la refappel
 			$savprod = array(
 				"BASECAMP" => $this->db_prospect_basecamp,
-				"REFPROSPECT" => $this->prospect_id,
+				"REFAPPEL" => $this->$this->appel_id,
 				"HOTESSE" => $this->agent_lib,
 				"IDAGENT" => $this->agent_id,
 				"DATEAPPEL" => $this->appel_date,
@@ -416,17 +440,18 @@ class Closing{
 			// Liste des champs
 			$strReq = $this->dao->keysToStrPDOUpdate($savprod);
 			
-			// Ajout de la référence prospect au tableau
-			$savprod['REFAPPEL'] = $this->appel_id;
+			// Ajout de la référence prospect et l'unique id au tableau
+			$savprod['REFPROSPECT'] = $this->prospect_id;
+			$savprod['UNIQUE_ID'] = $this->appel_uniqueid;
 			
 			// Sauvgarde les infos
 			try{
-				$req_updateProd = $this->dao->getSavProd()->prepare('UPDATE Prod SET '.$strReq.' WHERE REFAPPEL = :REFAPPEL;');
+				$req_updateProd = $this->dao->getSavProd()->prepare("UPDATE Prod SET $strReq WHERE REFPROSPECT = :REFPROSPECT AND UNIQUE_ID = :UNIQUE_ID;");
 				$req_updateProd->execute($savprod);
 			}catch(PDOException $e){
 				// Vérifie si le résultat à bien été sauvgardé
 				$trace = debug_backtrace();
-				trigger_error("Erreur dans la sauvegarde de la prod dans ".$trace[0]['file']."
+				trigger_error("Erreur dans la mise à jour de la prod dans ".$trace[0]['file']."
 						  à la ligne ".$trace[0]['line'].". Erreur PDO : ".$e->getMessage().".", E_USER_NOTICE);
 				exit();
 			}
@@ -441,7 +466,8 @@ class Closing{
 				"DATEAPPEL" => $this->appel_date,
 				"HEUREAPPEL" => $this->appel_heure,
 				"REFQUALIF" => $this->resultat_conclusion_id,
-				"REFAPPEL" => $this->appel_id
+				"REFAPPEL" => $this->appel_id,
+				"UNIQUE_ID" => $this->appel_uniqueid
 			);
 			
 			// Liste des champs
@@ -449,7 +475,7 @@ class Closing{
 			
 			// Sauvgarde les infos
 			try{
-				$req_insertProd = $this->dao->getSavProd()->prepare('INSERT INTO Prod '.$strReq.';');
+				$req_insertProd = $this->dao->getSavProd()->prepare("INSERT INTO Prod $strReq;");
 				$req_insertProd->execute($savprod);
 			}catch(PDOException $e){
 				// Vérifie si le résultat à bien été sauvgardé
@@ -460,18 +486,45 @@ class Closing{
 			}
 		}
 	}
+
+	/**
+	 * Vérifie si l'appel existe déjà dans la table Resultats
+	 *
+	 * @return boolean Est présent ou non dans le table
+	*/
+	public function checkExistAppelResultats(){
+		// Count des itérations
+		$i = 0;	
+		
+		// Récupére le rappel
+		$req_getAppelResultats = $this->dao->getCamp()->prepare('SELECT REF_AUTO FROM Resultats WHERE RefProspect = :ref AND UNIQUE_ID = :uniqueId');
+		$req_getAppelResultats->execute(array(
+			"ref" => $this->prospect_id,
+			"uniqueId" => $this->appel_uniqueid
+		));
+		
+		foreach($req_getAppelResultats as $resultat){
+			$i++;
+		}
+		
+		if($i > 0){
+			return true;
+		}
+		
+		return false;
+	}
 	
 	/**
 	 * Vérifie si la refappel existe déjà dans la table Prod
 	 *
 	 * @return boolean Est présent ou non dans le table
 	*/
-	public function checkExistRefAppelProd(){
+	public function checkExistProd(){
 		// Count des itérations
 		$i = 0;	
 		
 		// Récupére la refappel
-		$req_getRefappel = $this->dao->getSavProd()->prepare('SELECT REFAPPEL FROM Prod WHERE REFAPPEL = :refappel');
+		$req_getRefappel = $this->dao->getSavProd()->prepare("SELECT REFAPPEL FROM Prod WHERE REFAPPEL = :refappel;");
 		$req_getRefappel->execute(array(
 			"refappel" => $this->appel_id
 		));
@@ -497,7 +550,7 @@ class Closing{
 		$i = 0;	
 		
 		// Récupére le rappel
-		$req_getRappel = $this->dao->getCamp()->prepare('SELECT RefAgent FROM Rappels WHERE RefProspRapp = :ref');
+		$req_getRappel = $this->dao->getCamp()->prepare("SELECT RefAgent FROM Rappels WHERE RefProspRapp = :ref;");
 		$req_getRappel->execute(array(
 			"ref" => $this->prospect_id
 		));
@@ -525,7 +578,7 @@ class Closing{
 		$i = 0;	
 		
 		// Récupére le rappel
-		$req_getRappel = $this->dao->getCampP2()->prepare('SELECT RefAgent FROM Rappels WHERE RefProspRapp = :ref');
+		$req_getRappel = $this->dao->getCampP2()->prepare("SELECT RefAgent FROM Rappels WHERE RefProspRapp = :ref;");
 		$req_getRappel->execute(array(
 			"ref" => $this->prospect_id
 		));
@@ -565,11 +618,11 @@ class Closing{
 			if($this->checkExistRappel()){
 				$strReq = $this->dao->keysToStrPDOUpdate($rappel);
 				$rappel['RefProspRapp'] = $this->prospect_id;
-				$req_insertRappel = $this->dao->getCamp()->prepare('UPDATE Rappels SET '.$strReq." WHERE RefProspRapp = :RefProspRapp;");
+				$req_insertRappel = $this->dao->getCamp()->prepare("UPDATE Rappels SET $strReq WHERE RefProspRapp = :RefProspRapp;");
 			}else{
 				$rappel['RefProspRapp'] = $this->prospect_id;
 				$strReq = $this->dao->keysToStrPDOInsert($rappel);
-				$req_insertRappel = $this->dao->getCamp()->prepare('INSERT INTO Rappels '.$strReq.';');
+				$req_insertRappel = $this->dao->getCamp()->prepare("INSERT INTO Rappels $strReq;");
 			}
 			$req_insertRappel->execute($rappel);
 		}catch(PDOException $e){
@@ -605,11 +658,11 @@ class Closing{
 			if($this->checkExistRappelP2()){
 				$strReq = $this->dao->keysToStrPDOUpdate($rappel);
 				$rappel['RefProspRapp'] = $this->prospect_id;
-				$req_insertRappel = $this->dao->getCampP2()->prepare('UPDATE Rappels SET '.$strReq." WHERE RefProspRapp = :RefProspRapp;");
+				$req_insertRappel = $this->dao->getCampP2()->prepare("UPDATE Rappels SET $strReq WHERE RefProspRapp = :RefProspRapp;");
 			}else{
 				$rappel['RefProspRapp'] = $this->prospect_id;
 				$strReq = $this->dao->keysToStrPDOInsert($rappel);
-				$req_insertRappel = $this->dao->getCampP2()->prepare('INSERT INTO Rappels '.$strReq.';');
+				$req_insertRappel = $this->dao->getCampP2()->prepare("INSERT INTO Rappels $strReq;");
 			}
 			$req_insertRappel->execute($rappel);
 		}catch(PDOException $e){
@@ -631,7 +684,7 @@ class Closing{
 		$i = 0;	
 		
 		// Récupére le resappel
-		$req_getResAppel = $this->dao->getCamp()->prepare('SELECT NbAppels FROM ResAppel WHERE RefProspect = :ref');
+		$req_getResAppel = $this->dao->getCamp()->prepare("SELECT NbAppels FROM ResAppel WHERE RefProspect = :ref;");
 		$req_getResAppel->execute(array(
 			"ref" => $this->prospect_id
 		));
@@ -657,7 +710,7 @@ class Closing{
 		$i = 0;	
 		
 		// Récupére le resappel
-		$req_getResAppel = $this->dao->getCampP2()->prepare('SELECT RefProspect FROM Prospect WHERE RefProspect = :ref');
+		$req_getResAppel = $this->dao->getCampP2()->prepare("SELECT RefProspect FROM Prospect WHERE RefProspect = :ref;");
 		$req_getResAppel->execute(array(
 			"ref" => $this->prospect_id
 		));
@@ -683,7 +736,7 @@ class Closing{
 		$i = 0;
 		
 		// Récupére le resappel
-		$req_getResAppel = $this->dao->getCamp()->prepare('SELECT NbAppels FROM ResAppel WHERE RefProspect = :ref');
+		$req_getResAppel = $this->dao->getCamp()->prepare("SELECT NbAppels FROM ResAppel WHERE RefProspect = :ref;");
 		$req_getResAppel->execute(array(
 			"ref" => $this->prospect_id
 		));
@@ -725,7 +778,7 @@ class Closing{
 			
 			// Sauvgarde les infos
 			try{
-				$req_insertResAppel = $this->dao->getCamp()->prepare('UPDATE ResAppel SET '.$strReq.' WHERE RefProspect = :refprospect;');
+				$req_insertResAppel = $this->dao->getCamp()->prepare("UPDATE ResAppel SET $strReq WHERE RefProspect = :refprospect;");
 				$req_insertResAppel->execute($resappel);
 			}catch(PDOException $e){
 				// Vérifie si le résultat à bien été sauvgardé
@@ -754,7 +807,7 @@ class Closing{
 			
 			// Sauvgarde les infos
 			try{
-				$req_insertResAppel = $this->dao->getCamp()->prepare('INSERT INTO ResAppel '.$strReq.';');
+				$req_insertResAppel = $this->dao->getCamp()->prepare("INSERT INTO ResAppel $strReq;");
 				$req_insertResAppel->execute($resappel);
 			}catch(PDOException $e){
 				// Vérifie si le résultat à bien été sauvgardé
@@ -778,7 +831,7 @@ class Closing{
 		
 		// Récupère les informations de la phase 1
 		try{
-			$req_getProspectP1 = $this->dao->getCamp()->prepare('SELECT * FROM Prospect WHERE RefProspect = :ref;');
+			$req_getProspectP1 = $this->dao->getCamp()->prepare("SELECT * FROM Prospect WHERE RefProspect = :ref;");
 			$req_getProspectP1->execute(array(
 				"ref" => $this->prospect_id
 			));
@@ -812,7 +865,7 @@ class Closing{
 			
 			// Insère les informations dans la phase 2
 			try{
-				$req_getProspectP2 = $this->dao->getCampP2()->prepare('UPDATE Prospect SET '.$strReq." WHERE RefProspect = :RefProspect;");
+				$req_getProspectP2 = $this->dao->getCampP2()->prepare("UPDATE Prospect SET $strReq WHERE RefProspect = :RefProspect;");
 				$req_getProspectP2->execute($prospect);
 			}catch(PDOException $e){
 				// Vérifie si le prospect à bien été inséré
@@ -832,7 +885,7 @@ class Closing{
 			
 			// Insère les informations dans la phase 2
 			try{
-				$req_getProspectP2 = $this->dao->getCampP2()->prepare('INSERT INTO Prospect '.$strReq.";");
+				$req_getProspectP2 = $this->dao->getCampP2()->prepare("INSERT INTO Prospect $strReq;");
 				$req_getProspectP2->execute($prospect);
 			}catch(PDOException $e){
 				// Vérifie si le prospect à bien été inséré
