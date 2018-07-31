@@ -231,7 +231,27 @@ class Opening{
 		);
 		
 		// Vérifie si l'appel a déjà été qualifié
-		if(!$this->checkExistAppelResultats()){
+		if($this->checkExistAppelResultats()){
+			// Liste des champs
+			$strReq = $this->dao->keysToStrPDOUpdate($save);
+
+			// Ajout des propriétés obligatoires
+			// pour la where clause de la mise à jour
+			$save['RefProspect'] = $this->prospect_id;
+			$save['UNIQUE_ID'] = $this->appel_uniqueid;
+
+			// Sauvgarde les infos
+			try{
+				$req_updateResultat = $this->dao->getCamp()->prepare("UPDATE Resultats SET $strReq WHERE RefProspect = :RefProspect AND UNIQUE_ID = :UNIQUE_ID;");
+				$req_updateResultat->execute($save);
+			}catch(PDOException $e){
+				// Vérifie si le résultat à bien été sauvgardé
+				$trace = debug_backtrace();
+				trigger_error("Erreur dans la mise à jour du résultat dans ".$trace[0]['file']."
+						à la ligne ".$trace[0]['line'].". Erreur PDO : ".$e->getMessage().".", E_USER_NOTICE);
+				exit();
+			}
+		}else{
 			// Ajout des propriétés obligatoires pour un ajout à la base
 			$save['RefProspect'] = $this->prospect_id;
 			$save['UNIQUE_ID'] = $this->appel_uniqueid;
@@ -263,7 +283,38 @@ class Opening{
 		$i = 0;
 		
 		// Vérifie si la refappel est déjà présente
-		if(!$this->checkExistProd()){
+		if($this->checkExistProd()){
+			// Tableau conteant les informations de la refappel
+			$savprod = array(
+				"BASECAMP" => $this->db_prospect_basecamp,
+				"REFAPPEL" => $this->appel_id,
+				"HOTESSE" => $this->agent_lib,
+				"IDAGENT" => $this->agent_id,
+				"DATEAPPEL" => date("d/m/Y"),
+				"HEUREAPPEL" => date("H:i:s"),
+				"REFQUALIF" => 0
+			);
+			
+			// Liste des champs
+			$strReq = $this->dao->keysToStrPDOUpdate($savprod);
+			
+			// Ajout de la référence prospect et l'unique id au tableau
+			$savprod['REFPROSPECT'] = $this->prospect_id;
+			$savprod['UNIQUE_ID'] = $this->appel_uniqueid;
+			
+			// Sauvgarde les infos
+			try{
+				$req_updateProd = $this->dao->getSavProd()->prepare("UPDATE Prod SET $strReq WHERE REFPROSPECT = :REFPROSPECT AND UNIQUE_ID = :UNIQUE_ID;");
+				$req_updateProd->execute($savprod);
+			}catch(PDOException $e){
+				// Vérifie si le résultat à bien été sauvgardé
+				$trace = debug_backtrace();
+				trigger_error("Erreur dans la mise à jour de la prod dans ".$trace[0]['file']."
+						  à la ligne ".$trace[0]['line'].". Erreur PDO : ".$e->getMessage().".", E_USER_NOTICE);
+				exit();
+			}
+			
+		}else{
 			// Tableau conteant les informations de resappel
 			$savprod = array(
 				"BASECAMP" => $this->db_prospect_basecamp,
