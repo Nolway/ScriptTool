@@ -21,7 +21,8 @@ class Opening{
 		$this->dao = new DAO($this->serveur_id, $this->campagne_id);
 		$this->getProspect();
 		$this->getAgent();
-        $this->getPseudo();
+		$this->getPseudo();
+		$this->defaultResultat();
 	}
     
     /**
@@ -207,7 +208,144 @@ class Opening{
 		}else{
 			return 0;
 		}
-    }
+	}
+	
+	/**
+	 * Crée une information de base 
+	 *
+	 * @param array $save Tableau contenant en clé le nom du
+	 * champ dans la base et en valeur la valeur à insérer
+	*/
+	private function defaultResultat(){
+		// Count des itérations
+		$i = 0;
+		
+		// Ajout des propriétés obligatoires
+		$save = array(
+			'RefAppel' => $this->appel_id,
+			'HOTESSE' => $this->agent_lib,
+			'DATEAPPEL' => date("d/m/Y"),
+			'HEUREAPPEL' => date("H:i:s"),
+			'RefQualif' => 0,
+			'RefCateg' => 0
+		);
+		
+		// Vérifie si l'appel a déjà été qualifié
+		if(!$this->checkExistAppelResultats()){
+			// Ajout des propriétés obligatoires pour un ajout à la base
+			$save['RefProspect'] = $this->prospect_id;
+			$save['UNIQUE_ID'] = $this->appel_uniqueid;
+
+			// Liste des champs
+			$strReq = $this->dao->keysToStrPDOInsert($save);
+
+			// Sauvgarde les infos
+			try{
+				$req_insertResultat = $this->dao->getCamp()->prepare("INSERT INTO Resultats $strReq;");
+				$req_insertResultat->execute($save);
+			}catch(PDOException $e){
+				// Vérifie si le résultat à bien été sauvgardé
+				$trace = debug_backtrace();
+				trigger_error("Erreur dans la sauvegarde du résultat dans ".$trace[0]['file']."
+						à la ligne ".$trace[0]['line'].". Erreur PDO : ".$e->getMessage().".", E_USER_NOTICE);
+				exit();
+			}
+		}
+		
+		$this->saveProd();
+	}
+
+	/**
+	 * Sauvegarde les données du résultat dans la table Prod
+	*/
+	private function saveProd(){
+		// Count des itérations
+		$i = 0;
+		
+		// Vérifie si la refappel est déjà présente
+		if(!$this->checkExistProd()){
+			// Tableau conteant les informations de resappel
+			$savprod = array(
+				"BASECAMP" => $this->db_prospect_basecamp,
+				"REFPROSPECT" => $this->prospect_id,
+				"HOTESSE" => $this->agent_lib,
+				"IDAGENT" => $this->agent_id,
+				"DATEAPPEL" => date("d/m/Y"),
+				"HEUREAPPEL" => date("H:i:s"),
+				"REFQUALIF" => 0,
+				"REFAPPEL" => $this->appel_id,
+				"UNIQUE_ID" => $this->appel_uniqueid
+			);
+			
+			// Liste des champs
+			$strReq = $this->dao->keysToStrPDOInsert($savprod);
+			
+			// Sauvgarde les infos
+			try{
+				$req_insertProd = $this->dao->getSavProd()->prepare("INSERT INTO Prod $strReq;");
+				$req_insertProd->execute($savprod);
+			}catch(PDOException $e){
+				// Vérifie si le résultat à bien été sauvgardé
+				$trace = debug_backtrace();
+				trigger_error("Erreur dans la sauvegarde du resappel dans ".$trace[0]['file']."
+						  à la ligne ".$trace[0]['line'].". Erreur PDO : ".$e->getMessage().".", E_USER_NOTICE);
+				exit();
+			}
+		}
+	}
+
+	/**
+	 * Vérifie si l'appel existe déjà dans la table Resultats
+	 *
+	 * @return boolean Est présent ou non dans le table
+	*/
+	public function checkExistAppelResultats(){
+		// Count des itérations
+		$i = 0;	
+		
+		// Récupére le rappel
+		$req_getAppelResultats = $this->dao->getCamp()->prepare('SELECT REF_AUTO FROM Resultats WHERE RefProspect = :ref AND UNIQUE_ID = :uniqueId');
+		$req_getAppelResultats->execute(array(
+			"ref" => $this->prospect_id,
+			"uniqueId" => $this->appel_uniqueid
+		));
+		
+		foreach($req_getAppelResultats as $resultat){
+			$i++;
+		}
+		
+		if($i > 0){
+			return true;
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Vérifie si la refappel existe déjà dans la table Prod
+	 *
+	 * @return boolean Est présent ou non dans le table
+	*/
+	public function checkExistProd(){
+		// Count des itérations
+		$i = 0;	
+		
+		// Récupére la refappel
+		$req_getRefappel = $this->dao->getSavProd()->prepare("SELECT REFAPPEL FROM Prod WHERE REFAPPEL = :refappel;");
+		$req_getRefappel->execute(array(
+			"refappel" => $this->appel_id
+		));
+		
+		foreach($req_getRefappel as $refappel){
+			$i++;
+		}
+		
+		if($i > 0){
+			return true;
+		}
+		
+		return false;
+	}
     
 }
 ?>

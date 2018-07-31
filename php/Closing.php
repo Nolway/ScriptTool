@@ -197,9 +197,7 @@ class Closing{
 					$save['NBAPP'] += 1;
 					break;
 				default:
-					if($this->resultat_conclusion != "REPONDEUR"){
-						$save['NBAPP'] += 1;
-					}
+					$save['NBAPP'] += 1;
 			}
 			
 			// Si nombre d'envoi BS supérieur à 2 alors alerte
@@ -429,7 +427,7 @@ class Closing{
 			// Tableau conteant les informations de la refappel
 			$savprod = array(
 				"BASECAMP" => $this->db_prospect_basecamp,
-				"REFAPPEL" => $this->$this->appel_id,
+				"REFAPPEL" => $this->appel_id,
 				"HOTESSE" => $this->agent_lib,
 				"IDAGENT" => $this->agent_id,
 				"DATEAPPEL" => $this->appel_date,
